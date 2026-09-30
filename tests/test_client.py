@@ -90,3 +90,51 @@ async def test_worklog_limit_is_bounded(settings: Settings) -> None:
     async with TrackerClient(settings) as client:
         with pytest.raises(ValueError, match="between 1 and 500"):
             await client.get_issue_worklogs("TEST-1", limit=501)
+
+
+async def test_metadata_endpoints(settings: Settings) -> None:
+    base = "https://api.tracker.yandex.net/v3"
+    with aioresponses() as mocked:
+        mocked.get(f"{base}/myself", payload={"login": "me"})
+        mocked.get(f"{base}/users/alice", payload={"login": "alice"})
+        mocked.get(f"{base}/users?page=1&perPage=10", payload=[{"login": "alice"}])
+        mocked.get(f"{base}/fields", payload=[{"id": "summary"}])
+        mocked.get(f"{base}/queues/TEST/fields", payload=[{"id": "priority"}])
+        mocked.get(f"{base}/queues/TEST/localFields", payload=[{"id": "local"}])
+        mocked.get(f"{base}/statuses", payload=[{"key": "open"}])
+        mocked.get(f"{base}/issuetypes", payload=[{"key": "task"}])
+        mocked.get(f"{base}/priorities", payload=[{"key": "normal"}])
+        mocked.get(f"{base}/resolutions", payload=[{"key": "fixed"}])
+
+        async with TrackerClient(settings) as client:
+            assert (await client.get_current_user())["login"] == "me"
+            assert (await client.get_user("alice"))["login"] == "alice"
+            assert len(await client.list_users(page=1, per_page=10)) == 1
+            assert len(await client.get_global_fields()) == 1
+            assert len(await client.get_queue_fields("TEST")) == 1
+            assert len(await client.get_queue_local_fields("TEST")) == 1
+            assert len(await client.get_statuses()) == 1
+            assert len(await client.get_issue_types()) == 1
+            assert len(await client.get_priorities()) == 1
+            assert len(await client.get_resolutions()) == 1
+
+
+async def test_worklog_write_lifecycle(settings: Settings) -> None:
+    base = "https://api.tracker.yandex.net/v3/issues/TEST-1/worklog"
+    with aioresponses() as mocked:
+        mocked.post(base, payload={"id": "7", "duration": "PT1H"})
+        mocked.patch(f"{base}/7", payload={"id": "7", "duration": "PT2H"})
+        mocked.delete(f"{base}/7", status=204)
+
+        async with TrackerClient(settings) as client:
+            created = await client.add_worklog(
+                "TEST-1",
+                duration="PT1H",
+                comment="Implementation",
+                start="2026-09-30T10:00:00.000+0300",
+            )
+            updated = await client.update_worklog("TEST-1", "7", {"duration": "PT2H"})
+            await client.delete_worklog("TEST-1", "7")
+
+    assert created["id"] == "7"
+    assert updated["duration"] == "PT2H"

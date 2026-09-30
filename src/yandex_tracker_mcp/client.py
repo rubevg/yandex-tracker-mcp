@@ -137,6 +137,43 @@ class TrackerClient:
         )
         return self._expect_list(result)
 
+    async def list_users(self, *, page: int = 1, per_page: int = 50) -> list[JsonObject]:
+        result = await self._request(
+            "GET",
+            "users",
+            params={"page": page, "perPage": min(per_page, self.settings.max_response_items)},
+        )
+        return self._expect_list(result)
+
+    async def get_user(self, user_id: str) -> JsonObject:
+        result = await self._request("GET", f"users/{user_id}")
+        return self._expect_object(result)
+
+    async def get_current_user(self) -> JsonObject:
+        result = await self._request("GET", "myself")
+        return self._expect_object(result)
+
+    async def get_global_fields(self) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", "fields"))
+
+    async def get_queue_fields(self, queue_id: str) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", f"queues/{queue_id}/fields"))
+
+    async def get_queue_local_fields(self, queue_id: str) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", f"queues/{queue_id}/localFields"))
+
+    async def get_statuses(self) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", "statuses"))
+
+    async def get_issue_types(self) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", "issuetypes"))
+
+    async def get_priorities(self) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", "priorities"))
+
+    async def get_resolutions(self) -> list[JsonObject]:
+        return self._expect_list(await self._request("GET", "resolutions"))
+
     async def list_transitions(self, issue_id: str) -> list[JsonObject]:
         result = await self._request("GET", f"issues/{issue_id}/transitions")
         return self._expect_list(result)
@@ -239,6 +276,40 @@ class TrackerClient:
             cursor = next_cursor
 
         return worklogs[:effective_limit]
+
+    async def add_worklog(
+        self,
+        issue_id: str,
+        *,
+        duration: str,
+        comment: str | None = None,
+        start: str | None = None,
+    ) -> JsonObject:
+        body: JsonObject = {"duration": duration}
+        if comment is not None:
+            body["comment"] = comment
+        if start is not None:
+            body["start"] = start
+        result = await self._request("POST", f"issues/{issue_id}/worklog", json=body)
+        return self._expect_object(result)
+
+    async def update_worklog(
+        self,
+        issue_id: str,
+        worklog_id: str,
+        fields: JsonObject,
+    ) -> JsonObject:
+        if not fields:
+            raise ValueError("worklog update must not be empty")
+        result = await self._request(
+            "PATCH",
+            f"issues/{issue_id}/worklog/{worklog_id}",
+            json=fields,
+        )
+        return self._expect_object(result)
+
+    async def delete_worklog(self, issue_id: str, worklog_id: str) -> None:
+        await self._request("DELETE", f"issues/{issue_id}/worklog/{worklog_id}")
 
     @classmethod
     def _checklist_from_issue(cls, value: Any) -> list[JsonObject]:

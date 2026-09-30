@@ -83,6 +83,70 @@ def _sorted_groups(values: dict[str, int]) -> list[JsonObject]:
     ]
 
 
+def build_checklist_report(
+    issue_id: str,
+    checklist: list[JsonObject],
+    *,
+    as_of: str | None = None,
+) -> JsonObject:
+    report_date = _parse_date(as_of, "as_of") or date.today()
+    by_assignee: dict[str, JsonObject] = {}
+    overdue_items: list[JsonObject] = []
+    completed = 0
+
+    for item in checklist:
+        checked = item.get("checked") is True
+        if checked:
+            completed += 1
+
+        assignee = _reference_label(item.get("assignee"), "unassigned")
+        assignee_summary = by_assignee.setdefault(
+            assignee,
+            {"assignee": assignee, "total": 0, "completed": 0, "open": 0, "overdue": 0},
+        )
+        assignee_summary["total"] = int(assignee_summary["total"]) + 1
+        state = "completed" if checked else "open"
+        assignee_summary[state] = int(assignee_summary[state]) + 1
+
+        deadline = item.get("deadline")
+        deadline_value = deadline.get("date") if isinstance(deadline, dict) else None
+        deadline_date: date | None = None
+        if isinstance(deadline_value, str):
+            try:
+                deadline_date = datetime.fromisoformat(
+                    deadline_value.replace("Z", "+00:00")
+                ).date()
+            except ValueError:
+                deadline_date = None
+        exceeded = isinstance(deadline, dict) and deadline.get("isExceeded") is True
+        is_overdue = not checked and (
+            exceeded or (deadline_date is not None and deadline_date < report_date)
+        )
+        if is_overdue:
+            assignee_summary["overdue"] = int(assignee_summary["overdue"]) + 1
+            overdue_items.append(
+                {
+                    "id": item.get("id"),
+                    "text": item.get("text"),
+                    "assignee": assignee,
+                    "deadline": deadline_value,
+                }
+            )
+
+    total = len(checklist)
+    return {
+        "issue_id": issue_id,
+        "as_of": report_date.isoformat(),
+        "total": total,
+        "completed": completed,
+        "open": total - completed,
+        "progress_percent": round(completed / total * 100, 2) if total else 100.0,
+        "overdue_count": len(overdue_items),
+        "overdue_items": overdue_items,
+        "by_assignee": sorted(by_assignee.values(), key=lambda value: str(value["assignee"])),
+    }
+
+
 def _summarize_worklogs(
     records: list[tuple[JsonObject, JsonObject]],
     warnings: list[str],

@@ -3,6 +3,7 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
+from ..analytics import build_checklist_report
 from ..client import TrackerClient
 from ..config import get_settings
 
@@ -23,6 +24,21 @@ def register_checklist_tools(mcp: FastMCP) -> None:
     async def get_checklist(issue_id: str) -> list[JsonObject]:
         async with TrackerClient(get_settings()) as client:
             return await client.get_checklist(issue_id)
+
+    @mcp.tool(
+        description=(
+            "Проанализировать чек-лист задачи: прогресс, открытые и просроченные "
+            "пункты, разбивка по исполнителям. as_of задаётся как YYYY-MM-DD."
+        ),
+        annotations=ToolAnnotations(readOnlyHint=True),
+    )
+    async def get_checklist_report(
+        issue_id: str,
+        as_of: str | None = None,
+    ) -> JsonObject:
+        async with TrackerClient(get_settings()) as client:
+            checklist = await client.get_checklist(issue_id)
+        return build_checklist_report(issue_id, checklist, as_of=as_of)
 
     @mcp.tool(
         description=(

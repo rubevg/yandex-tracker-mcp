@@ -11,7 +11,8 @@
 - получение очередей;
 - просмотр и выполнение переходов статуса;
 - полное управление пунктами чек-листа;
-- чтение трудозатрат и отчёты по задаче, сотрудникам, очередям и периодам;
+- управление трудозатратами и отчёты по задаче, сотрудникам, очередям и периодам;
+- пользователи, поля очередей, статусы, типы задач, приоритеты и резолюции;
 - OAuth- и IAM-аутентификация;
 - поддержка организаций Яндекс 360 и Yandex Cloud.
 
@@ -76,9 +77,20 @@ Read-only:
 - `list_queues`
 - `list_transitions`
 - `get_checklist`
+- `get_checklist_report`
 - `list_worklogs`
 - `get_issue_time_report`
 - `get_time_report`
+- `get_current_user`
+- `get_user`
+- `list_users`
+- `search_users`
+- `get_global_fields`
+- `get_queue_fields`
+- `get_statuses`
+- `get_issue_types`
+- `get_priorities`
+- `get_resolutions`
 
 Изменяющие данные:
 
@@ -89,6 +101,9 @@ Read-only:
 - `add_checklist_item`
 - `update_checklist_item`
 - `delete_checklist_item`
+- `add_worklog`
+- `update_worklog`
+- `delete_worklog`
 
 ### Чек-листы
 
@@ -96,6 +111,9 @@ Read-only:
 удаления. Пункты поддерживают текст, отметку выполнения, исполнителя и deadline.
 Для снятия исполнителя или срока используйте `clear_assignee` или
 `clear_deadline` в `update_checklist_item`.
+
+`get_checklist_report` рассчитывает процент выполнения, показывает открытые и
+просроченные пункты и группирует их по исполнителям.
 
 ### Анализ времени
 
@@ -114,6 +132,17 @@ Read-only:
 к минутам, считая рабочий день равным 8 часам, а рабочую неделю — 40 часам.
 Один отчёт обрабатывает не более 200 задач и 500 worklog-записей на задачу;
 при достижении лимита ответ содержит `truncated: true`.
+
+Для записи времени используйте длительность ISO 8601, например `PT1H30M`.
+`add_worklog`, `update_worklog` и `delete_worklog` изменяют данные и требуют
+предварительного подтверждения пользователя.
+
+### Справочники
+
+Перед созданием или изменением задачи MCP может получить допустимые значения
+через `get_issue_types`, `get_priorities`, `get_statuses`, `get_resolutions` и
+`get_queue_fields`. `search_users` ищет по логину, email или имени и
+просматривает не более 1000 пользователей.
 
 ## Разработка
 

@@ -2,7 +2,11 @@ from typing import Any
 
 import pytest
 
-from yandex_tracker_mcp.analytics import build_issue_time_report, build_time_report
+from yandex_tracker_mcp.analytics import (
+    build_checklist_report,
+    build_issue_time_report,
+    build_time_report,
+)
 
 
 class FakeTrackerClient:
@@ -126,3 +130,51 @@ async def test_report_rejects_inverted_period(fake_client: FakeTrackerClient) ->
             date_from="2026-09-03",
             date_to="2026-09-01",
         )
+
+
+def test_checklist_report_tracks_progress_overdue_and_assignees() -> None:
+    checklist = [
+        {
+            "id": "1",
+            "text": "Done",
+            "checked": True,
+            "assignee": {"login": "alice"},
+        },
+        {
+            "id": "2",
+            "text": "Late",
+            "checked": False,
+            "assignee": {"login": "alice"},
+            "deadline": {"date": "2026-09-01T00:00:00.000+0000"},
+        },
+        {"id": "3", "text": "Open", "checked": False},
+    ]
+
+    report = build_checklist_report("TEST-1", checklist, as_of="2026-09-30")
+
+    assert report["progress_percent"] == pytest.approx(33.33)
+    assert report["overdue_count"] == 1
+    assert report["overdue_items"][0]["id"] == "2"
+    assert report["by_assignee"] == [
+        {
+            "assignee": "alice",
+            "total": 2,
+            "completed": 1,
+            "open": 1,
+            "overdue": 1,
+        },
+        {
+            "assignee": "unassigned",
+            "total": 1,
+            "completed": 0,
+            "open": 1,
+            "overdue": 0,
+        },
+    ]
+
+
+def test_empty_checklist_is_complete() -> None:
+    report = build_checklist_report("TEST-1", [], as_of="2026-09-30")
+
+    assert report["progress_percent"] == 100.0
+    assert report["total"] == 0
