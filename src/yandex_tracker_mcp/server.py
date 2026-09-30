@@ -1,12 +1,13 @@
 from mcp.server.fastmcp import FastMCP
 
-from .tools import register_tools
+from .toolsets import register_tools
 
 mcp = FastMCP(
     "Yandex Tracker",
     instructions=(
-        "Use read tools freely. Before create_issue, update_issue, add_comment, or "
-        "execute_transition, show the proposed change and obtain user confirmation."
+        "Use read and reporting tools freely. Before any tool that creates, updates, "
+        "deletes, comments on, or transitions Tracker data, show the proposed change "
+        "and obtain user confirmation."
     ),
 )
 register_tools(mcp)

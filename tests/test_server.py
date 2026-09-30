@@ -6,13 +6,20 @@ async def test_expected_tools_are_registered() -> None:
     names = {tool.name for tool in tools}
 
     assert names == {
+        "add_checklist_item",
         "add_comment",
         "create_issue",
+        "delete_checklist_item",
         "execute_transition",
+        "get_checklist",
         "get_issue",
+        "get_issue_time_report",
+        "get_time_report",
         "list_comments",
         "list_queues",
         "list_transitions",
+        "list_worklogs",
         "search_issues",
+        "update_checklist_item",
         "update_issue",
     }

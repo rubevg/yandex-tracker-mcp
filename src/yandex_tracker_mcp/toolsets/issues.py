@@ -3,13 +3,13 @@ from typing import Any
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
 
-from .client import TrackerClient
-from .config import get_settings
+from ..client import TrackerClient
+from ..config import get_settings
 
 JsonObject = dict[str, Any]
 
 
-def register_tools(mcp: FastMCP) -> None:
+def register_issue_tools(mcp: FastMCP) -> None:
     @mcp.tool(
         description="Получить задачу Яндекс Трекера по ключу, например TEST-123.",
         annotations=ToolAnnotations(readOnlyHint=True),

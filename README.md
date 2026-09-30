@@ -10,6 +10,8 @@
 - чтение и добавление комментариев;
 - получение очередей;
 - просмотр и выполнение переходов статуса;
+- полное управление пунктами чек-листа;
+- чтение трудозатрат и отчёты по задаче, сотрудникам, очередям и периодам;
 - OAuth- и IAM-аутентификация;
 - поддержка организаций Яндекс 360 и Yandex Cloud.
 
@@ -73,6 +75,10 @@ Read-only:
 - `list_comments`
 - `list_queues`
 - `list_transitions`
+- `get_checklist`
+- `list_worklogs`
+- `get_issue_time_report`
+- `get_time_report`
 
 Изменяющие данные:
 
@@ -80,6 +86,34 @@ Read-only:
 - `update_issue`
 - `add_comment`
 - `execute_transition`
+- `add_checklist_item`
+- `update_checklist_item`
+- `delete_checklist_item`
+
+### Чек-листы
+
+`get_checklist` возвращает идентификаторы пунктов, необходимые для изменения и
+удаления. Пункты поддерживают текст, отметку выполнения, исполнителя и deadline.
+Для снятия исполнителя или срока используйте `clear_assignee` или
+`clear_deadline` в `update_checklist_item`.
+
+### Анализ времени
+
+`get_issue_time_report` строит отчёт по одной задаче: первоначальная и текущая
+оценка, сумма worklog-записей, отклонение и разбивка по сотрудникам и дням.
+
+`get_time_report` принимает запрос на языке Трекера и может ограничить отчёт
+датами `date_from` / `date_to` в формате `YYYY-MM-DD`. Например:
+
+```text
+Покажи затраты команды по Queue: "BACKEND" с 2026-09-01 по 2026-09-30,
+с разбивкой по сотрудникам и задачам.
+```
+
+Трекер хранит worklog в ISO 8601 (`PT1H30M`). Сервер приводит все длительности
+к минутам, считая рабочий день равным 8 часам, а рабочую неделю — 40 часам.
+Один отчёт обрабатывает не более 200 задач и 500 worklog-записей на задачу;
+при достижении лимита ответ содержит `truncated: true`.
 
 ## Разработка
 
@@ -99,6 +133,10 @@ uv run pytest
 - [Поля задач](https://yandex.ru/support/tracker/ru/api-ref/issues/request-fields)
 - [Комментарии](https://yandex.ru/support/tracker/ru/api-ref/comments/)
 - [Переходы между статусами](https://yandex.ru/support/tracker/ru/api-ref/issues/get-transitions)
+- [Получить чек-лист](https://yandex.ru/support/tracker/ru/api-ref/issues/get-checklist)
+- [Добавить пункт чек-листа](https://yandex.ru/support/tracker/ru/api-ref/issues/add-checklist-item)
+- [Трудозатраты задачи](https://yandex.ru/support/tracker/ru/api-ref/issues/issue-worklog)
+- [Поиск трудозатрат](https://yandex.ru/support/tracker/ru/api-ref/issues/get-worklog)
 
 API base URL: `https://api.tracker.yandex.net/v3`.
 
